@@ -40,7 +40,7 @@ interface Config extends vscode.WorkspaceConfiguration {
 
 Run `eslint --fix` and update the document before saving.
 
-* due to poor choices by the eslint team, we have to either use a temp file or a json preprocessor to get the formatted result. *
+*We have to use [jq](https://stedolan.github.io/jq/) to return the actual fixed document since `eslint` doesn't support it directly.*
 
 ```json
 save-runner": {
@@ -75,7 +75,7 @@ save-runner": {
 
 ## Links
 
-* [Marketplace](https://marketplace.visualstudio.com/items/emeraldwalk.RunOnSave)
+* [Marketplace](https://marketplace.visualstudio.com/items?itemName=oneofone.save-runner)
 * [Source Code](https://github.com/OneOfOne/vscode-save-runner)
 
 ## License

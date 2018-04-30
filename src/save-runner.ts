@@ -31,11 +31,11 @@ export default class SaveRunner {
 	}
 
 	start() {
-		console.log('wtf');
 		const disposables = [
 			vscode.workspace.onWillSaveTextDocument(this.runBeforeSave),
 			vscode.workspace.onDidSaveTextDocument(this.runAfterSave),
 			vscode.workspace.onDidChangeConfiguration(() => this.loadConfig()),
+			this.chan,
 		];
 
 		this.ctx.subscriptions.push(...disposables);
@@ -132,7 +132,6 @@ export default class SaveRunner {
 		for (const d of this.ds) {
 			d.dispose();
 		}
-		this.chan.dispose();
 	}
 
 	private loadConfig() {
