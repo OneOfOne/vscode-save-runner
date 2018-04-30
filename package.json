@@ -2,21 +2,17 @@
 	"name": "save-runner",
 	"displayName": "Run Before/After Save",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"publisher": "oneofone",
+	"repository": "https://github.com/OneOfOne/vscode-save-runner",
 	"engines": {
 		"vscode": "^1.22.0"
 	},
-	"categories": ["Other"],
+	"categories": ["Linters", "Formatters", "Other"],
 	"activationEvents": ["*"],
+	"private": true,
 	"main": "./out/extension",
 	"contributes": {
-		"commands": [
-			{
-				"command": "extension.sayHello",
-				"title": "Hello World"
-			}
-		],
 		"configuration": {
 			"title": "Run ",
 			"type": "object",
@@ -28,6 +24,11 @@
 							"type": "boolean",
 							"description": "Enable the extension.",
 							"default": true
+						},
+						"showOutput": {
+							"type": "boolean",
+							"description": "Automatically switch to the output panel when any commands are ran.",
+							"default": false
 						},
 						"autoClearConsole": {
 							"type": "boolean",
@@ -54,18 +55,18 @@
 										"default": ".*"
 									},
 									"before": {
-										"type": "string",
-										"description": "Command to execute before save, the document will be piped to the command and replaced with the output from the command.",
-										"default": "(cat, date)"
+										"type": ["string", "array"],
+										"description": "Command(s) to execute before save, the document will be piped to the command and replaced with the output from the command.",
+										"default": "openssl base64"
 									},
 									"after": {
 										"type": "string",
-										"description": "Command to execute on save.",
+										"description": "Command to execute after save.",
 										"default": "echo ${file}"
 									},
 									"isAsync": {
 										"type": "boolean",
-										"description": "Run command asynchronously, only applies to after save.",
+										"description": "Run after-save commands asynchronously.",
 										"default": false
 									}
 								}
@@ -84,8 +85,8 @@
 		"test": "npm run compile && node ./node_modules/vscode/bin/test"
 	},
 	"devDependencies": {
-		"typescript": "^2.6.1",
-		"vscode": "^1.1.6",
+		"typescript": "^2.7.0",
+		"vscode": "^1.22.0",
 		"tslint": "^5.8.0",
 		"@types/node": "^7.0.43",
 		"@types/mocha": "^2.2.42"
