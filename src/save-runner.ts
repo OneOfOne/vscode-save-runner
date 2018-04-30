@@ -1,12 +1,26 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as tmp from 'tmp';
 import { spawnSync } from 'child_process';
+import { writeFileSync, readFileSync } from 'fs';
 
 interface Command {
+	// regexp match, example: "\\.[tj]sx?$"
 	match?: string;
+
+	// regexp negative match, example: "do-not-lint-this.ts"
 	notMatch?: string;
+
+	// useTempFile instead of pipes, defaults to the global useTempFile
+	useTempFile?: boolean;
+
+	// command(s) to run before the document is saved to disk
 	before: string | string[];
-	after: string;
+
+	// command(s) to run after the document is saved to disk
+	after: string | string[];
+	// run after commands async, defaults to global isAsync;
+	isAsync?: boolean;
 }
 
 interface Config extends vscode.WorkspaceConfiguration {
@@ -14,8 +28,10 @@ interface Config extends vscode.WorkspaceConfiguration {
 	showOutput?: boolean;
 	shell?: string;
 	autoClearConsole?: boolean;
-	commands?: Command[];
+	useTempFile?: boolean;
 	isAsync?: boolean;
+
+	commands?: Command[];
 }
 
 export default class SaveRunner {
@@ -61,23 +77,39 @@ export default class SaveRunner {
 
 		this.log('Running before-save commands...');
 
-		let out = doc.getText();
+		let out = doc.getText(),
+			tempFile!: tmp.SynchrounousResult;
+
 		const len = out.length;
 
 		for (const cmd of cmds) {
-			let cp = cmd.before;
-			if (Array.isArray(cp)) cp = cp.join(' | ');
+			if (cmd.useTempFile && tempFile == null) tempFile = this.makeTempFile(out, doc.fileName);
+			const tmpFile = tempFile ? tempFile.name : '';
 
-			cp = this.expandVars(doc, cp);
+			let cps = cmd.before;
+			if (!Array.isArray(cps)) cps = [cps];
 
-			this.log(`\n- piping document to: ${cp}`);
+			for (let cp of cps) {
+				cp = this.expandVars(doc, cp, tmpFile);
 
-			try {
-				out = this.exec(cp, out);
-			} catch (err) {
-				this.log(`! ${cp} ${err}`);
-				break;
+				this.log(`\n- running: ${cp}`);
+
+				try {
+					if (cmd.useTempFile) {
+						out = this.exec(cp, out);
+					} else {
+						this.exec(cp);
+					}
+				} catch (err) {
+					this.log(`! ${cp} ${err}`);
+					break;
+				}
 			}
+		}
+
+		if (tempFile) {
+			out = readFileSync(tempFile.name).toString();
+			tempFile.removeCallback();
 		}
 
 		const range = new vscode.Range(0, 0, doc.lineCount, len);
@@ -100,25 +132,29 @@ export default class SaveRunner {
 		this.log('Running after-save commands...');
 
 		for (const cmd of cmds) {
-			const cp = this.expandVars(doc, cmd.after);
-			if (!isAsync) {
-				this.log(`\n- running: ${cp}\n`);
-				try {
-					this.chan.append(this.exec(cp));
-				} catch (err) {
-					this.log(`! ${cp} ${err}`);
-				}
-				continue;
-			}
+			let cps = cmd.before;
+			if (!Array.isArray(cps)) cps = [cps];
 
-			setTimeout(() => {
-				this.log(`\n- running: ${cp}\n`);
-				try {
-					this.chan.append(this.exec(cp));
-				} catch (err) {
-					this.log(`! ${cp} ${err}`);
+			for (const cp of cps) {
+				if (!isAsync) {
+					this.log(`\n- running: ${cp}\n`);
+					try {
+						this.chan.append(this.exec(cp));
+					} catch (err) {
+						this.log(`! ${cp} ${err}`);
+					}
+					continue;
 				}
-			}, 1);
+
+				setTimeout(() => {
+					this.log(`\n- running: ${cp}\n`);
+					try {
+						this.chan.append(this.exec(cp));
+					} catch (err) {
+						this.log(`! ${cp} ${err}`);
+					}
+				}, 1);
+			}
 		}
 
 		this.log('Done running.\n');
@@ -136,32 +172,45 @@ export default class SaveRunner {
 
 	private loadConfig() {
 		const cfg = vscode.workspace.getConfiguration('save-runner') as Config;
-		if (!cfg.commands) cfg.commands = [];
-		this.cfg = cfg;
+		this.cfg = {
+			...cfg,
+			commands: cfg.commands || [],
+			enabled: cfg.enabled == null ? true : cfg.enabled,
+			isAsync: cfg.isAsync == null ? true : cfg.isAsync,
+			useTempFile: cfg.useTempFile == null ? true : cfg.useTempFile,
+		};
 	}
 
 	private getCommands(doc: vscode.TextDocument, before?: boolean) {
-		const cmds = this.cfg.commands!.filter((cmd) => {
+		const { isAsync, useTempFile } = this.cfg;
+		let cmds = this.cfg.commands!.filter((cmd) => {
 			if (before) return !!cmd.before;
 			return !!cmd.after;
 		});
 
 		const match = (pattern: string) => !!pattern && new RegExp(pattern).test(doc.fileName);
 
-		return cmds.filter((cmd) => {
+		cmds = cmds.filter((cmd) => {
 			const isMatch = !cmd.match || match(cmd.match);
 			const isNeg = cmd.notMatch && match(cmd.notMatch);
 
 			return !isNeg && isMatch;
 		});
+
+		return cmds.map((cmd) => ({
+			...cmd,
+			useTempFile: cmd.useTempFile == null ? useTempFile : cmd.useTempFile,
+			isAsync: cmd.isAsync == null ? isAsync : cmd.isAsync,
+		}));
 	}
 
 	// shamelessly copied from https://github.com/emeraldwalk/vscode-runonsave/blob/master/src/extension.ts
-	private expandVars(doc: vscode.TextDocument, cmd: string) {
+	private expandVars(doc: vscode.TextDocument, cmd: string, tmpFile: string = '') {
 		const extName = path.extname(doc.fileName);
 
 		let fixed = cmd.replace(/\${file}/g, `${doc.fileName}`);
 		fixed = fixed.replace(/\${ext}/g, `${extName}`);
+		fixed = fixed.replace(/\${tmpFile}/g, `${tmpFile}`);
 		fixed = fixed.replace(/\${workspaceRoot}/g, `${vscode.workspace.rootPath}`);
 		fixed = fixed.replace(/\${basename}/g, `${path.basename(doc.fileName)}`);
 		fixed = fixed.replace(/\${dirname}/g, `${path.dirname(doc.fileName)}`);
@@ -181,6 +230,7 @@ export default class SaveRunner {
 			shell: this.cfg.shell || true,
 			input: text,
 		});
+
 		if (res.stderr.length) {
 			throw new Error(res.stderr.toString());
 		}
@@ -191,5 +241,16 @@ export default class SaveRunner {
 	private doPanelStuff() { // I'm the best with names
 		if (this.cfg.autoClearConsole) this.chan.clear();
 		if (this.cfg.showOutput) this.chan.show(true);
+	}
+
+	private makeTempFile(text: string, fn: string): tmp.SynchrounousResult {
+		const ext = path.extname(fn);
+		const f = tmp.fileSync({
+			discardDescriptor: true,
+			mode: 0o644,
+			postfix: ext,
+		});
+		writeFileSync(f.name, text);
+		return f;
 	}
 }

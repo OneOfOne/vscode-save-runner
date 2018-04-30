@@ -9,6 +9,7 @@ eslint extension's lack of proper fixing on save.
 
 * Preprocess the document and save the processed results.
 * Pipe the document to multiple preprocessors.
+* Use a temp file for before-save commands that doesn't support pipes.
 * Regex pattern matching for files that trigger commands running.
 * Sync and async support for after save commands.
 
@@ -16,12 +17,22 @@ eslint extension's lack of proper fixing on save.
 
 ```ts
 interface Command {
+	// regexp match, example: "\\.[tj]sx?$"
 	match?: string;
+
+	// regexp negative match, example: "do-not-lint-this.ts"
 	notMatch?: string;
-	// each command's output will be piped to the next one,
-	// the final result will replace the current editor.
+
+	// useTempFile instead of pipes, defaults to the global useTempFile
+	useTempFile?: boolean;
+
+	// command(s) to run before the document is saved to disk
 	before: string | string[];
-	after: string;
+
+	// command(s) to run after the document is saved to disk
+	after: string | string[];
+	// run after commands async, defaults to global isAsync;
+	isAsync?: boolean;
 }
 
 interface Config extends vscode.WorkspaceConfiguration {
@@ -29,9 +40,12 @@ interface Config extends vscode.WorkspaceConfiguration {
 	showOutput?: boolean;
 	shell?: string;
 	autoClearConsole?: boolean;
-	commands?: Command[];
+	useTempFile?: boolean;
 	isAsync?: boolean;
+
+	commands?: Command[];
 }
+
 ```
 
 * **TODO:** make this section human readable. *
@@ -43,35 +57,40 @@ Run `eslint --fix` and update the document before saving.
 *We have to use [jq](https://stedolan.github.io/jq/) to return the actual fixed document since `eslint` doesn't support it directly.*
 
 ```json
-save-runner": {
-	"enabled": true,
-	"showOutput": true,
-	"commands": [
-		{
-			// match ts, js, tsx, jsx files.
-			"match": "\.[tj]sx?$",
-			"before": [
-				"eslint --stdin --ext ${ext} --fix-dry-run --format=json",
-				"jq -r '.[0].output'"
-			],
-		}
-	]
-}
+	"save-runner": {
+		"enabled": true,
+		"showOutput": true,
+		"commands": [
+			{
+				"match": "\\.[tj]sx?$",
+				"useTempFile": true,
+				"before": "eslint --fix ${tmpFile}"
+			}
+			{
+				"match": "\\.something.wicked.this.way.comes",
+				"useTempFile": false,
+				"before": "openssl base64"
+			}
+		]
+	}
 ```
 
 ## Placeholders in commands
 
+* `${tmpFile}`: temp file path when `useTempFile` is set
+
 * `${workspaceRoot}`: workspace root folder
-* `${file}`: path of saved file
+* `${dirname}`: directory name of saved file
+
+* `${file}`: path to the file
 * `${ext}`: file extension
+
 * `${basename}`: saved file's basename
 * `${basenameNoExt}`: saved file's basename without extension
-* `${dirname}`: directory name of saved file
+
 * `${cwd}`: current working directory
 
-### Environment Variable Tokens
-
-* `${env.Name}`
+* `${env.{name}}` match environment variable by name
 
 ## Links
 
