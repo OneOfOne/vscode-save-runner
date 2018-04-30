@@ -2,7 +2,7 @@
 	"name": "save-runner",
 	"displayName": "Run Before/After Save",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {

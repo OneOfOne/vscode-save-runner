@@ -45,7 +45,6 @@ export default class SaveRunner {
 
 	runBeforeSave = (e: vscode.TextDocumentWillSaveEvent) => {
 		if (!this.cfg.enabled) return;
-		this.doPanelStuff();
 
 		const { document: doc } = e,
 			{ activeTextEditor: editor } = vscode.window,
@@ -57,6 +56,8 @@ export default class SaveRunner {
 			this.log('could not get an active editor, refusing to run commands.');
 			return;
 		}
+
+		this.doPanelStuff();
 
 		this.log('Running before-save commands...');
 
@@ -88,12 +89,13 @@ export default class SaveRunner {
 
 	runAfterSave = (doc: vscode.TextDocument) => {
 		if (!this.cfg.enabled) return;
-		this.doPanelStuff();
 
 		const cmds = this.getCommands(doc),
 			{ isAsync } = this.cfg;
 
 		if (!cmds.length) return;
+
+		this.doPanelStuff();
 
 		this.log('Running after-save commands...');
 
@@ -136,9 +138,6 @@ export default class SaveRunner {
 	private loadConfig() {
 		const cfg = vscode.workspace.getConfiguration('save-runner') as Config;
 		if (!cfg.commands) cfg.commands = [];
-
-		this.log('config loaded.');
-
 		this.cfg = cfg;
 	}
 
