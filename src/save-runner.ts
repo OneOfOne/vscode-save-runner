@@ -5,7 +5,7 @@ import { spawnSync } from 'child_process';
 interface Command {
 	match?: string;
 	notMatch?: string;
-	before: string;
+	before: string | string[];
 	after: string;
 }
 
@@ -64,7 +64,11 @@ export default class SaveRunner {
 		const len = out.length;
 
 		for (const cmd of cmds) {
-			const cp = this.expandVars(doc, cmd.before);
+			let cp = cmd.before;
+			if (Array.isArray(cp)) cp = cp.join(' | ');
+
+			cp = this.expandVars(doc, cp);
+
 			this.log(`\n- piping document to: ${cp}`);
 
 			try {
@@ -159,13 +163,12 @@ export default class SaveRunner {
 		const extName = path.extname(doc.fileName);
 
 		let fixed = cmd.replace(/\${file}/g, `${doc.fileName}`);
-		fixed = fixed.replace(/\${workspaceRoot}/g, `${vscode.workspace.rootPath}`);
-		fixed = fixed.replace(/\${fileBasename}/g, `${path.basename(doc.fileName)}`);
-		fixed = fixed.replace(/\${fileDirname}/g, `${path.dirname(doc.fileName)}`);
-		fixed = fixed.replace(/\${fileExtname}/g, `${extName}`);
-		fixed = fixed.replace(/\${fileBasenameNoExt}/g, `${path.basename(doc.fileName, extName)}`);
-		fixed = fixed.replace(/\${cwd}/g, `${process.cwd()}`);
 		fixed = fixed.replace(/\${ext}/g, `${extName}`);
+		fixed = fixed.replace(/\${workspaceRoot}/g, `${vscode.workspace.rootPath}`);
+		fixed = fixed.replace(/\${basename}/g, `${path.basename(doc.fileName)}`);
+		fixed = fixed.replace(/\${dirname}/g, `${path.dirname(doc.fileName)}`);
+		fixed = fixed.replace(/\${basenameNoExt}/g, `${path.basename(doc.fileName, extName)}`);
+		fixed = fixed.replace(/\${cwd}/g, `${process.cwd()}`);
 
 		// replace environment variables ${env.Name}
 		fixed = fixed.replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName]);

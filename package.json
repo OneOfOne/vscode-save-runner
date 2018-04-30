@@ -3,12 +3,21 @@
 	"displayName": "Run Before/After Save",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
 	"version": "1.0.0",
+	"license": "MIT",
 	"publisher": "oneofone",
-	"repository": "https://github.com/OneOfOne/vscode-save-runner",
+	"author": {
+		"name": "OneOfOne"
+	},
+	"bugs": "https://github.com/OneOfOne/vscode-save-runner/issues",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/OneOfOne/vscode-save-runner"
+	},
 	"engines": {
 		"vscode": "^1.22.0"
 	},
 	"categories": ["Linters", "Formatters", "Other"],
+	"keywords": ["run on save", "run before save", "eslint fix"],
 	"activationEvents": ["*"],
 	"private": true,
 	"main": "./out/extension",
@@ -28,7 +37,7 @@
 						"showOutput": {
 							"type": "boolean",
 							"description": "Automatically switch to the output panel when any commands are ran.",
-							"default": false
+							"default": true
 						},
 						"autoClearConsole": {
 							"type": "boolean",
@@ -37,7 +46,7 @@
 						},
 						"shell": {
 							"type": "string",
-							"description": "Specify shell path to run commands (gets used in options arg passed to child_process.exec)."
+							"description": "Specify shell path to run commands (gets used in options arg passed to child_process.spawnSync)."
 						},
 						"commands": {
 							"type": "array",

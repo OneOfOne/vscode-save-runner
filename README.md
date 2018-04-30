@@ -1,65 +1,83 @@
-# run-before-save README
+# Save Runner for Visual Studio Code
 
-This is the README for your extension "run-before-save". After writing up a brief description, we recommend including the following sections.
+This extension allows configuring commands that get run whenever a file is about to be saved or after it gets saved to disk.
+
+This extension is heavily inspired by [emeraldwalk.runonsave](https://marketplace.visualstudio.com/items?itemName=emeraldwalk.RunOnSave) and
+eslint extension's lack of proper fixing on save.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+* Preprocess the document and save the processed results.
+* Pipe the document to multiple preprocessors.
+* Regex pattern matching for files that trigger commands running.
+* Sync and async support for after save commands.
 
-For example if there is an image subfolder under your extension project workspace:
+## Configuration
 
-\!\[feature X\]\(images/feature-x.png\)
+```ts
+interface Command {
+	match?: string;
+	notMatch?: string;
+	// each command's output will be piped to the next one,
+	// the final result will replace the current editor.
+	before: string | string[];
+	after: string;
+}
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+interface Config extends vscode.WorkspaceConfiguration {
+	enabled?: boolean;
+	showOutput?: boolean;
+	shell?: string;
+	autoClearConsole?: boolean;
+	commands?: Command[];
+	isAsync?: boolean;
+}
+```
 
-## Requirements
+* **TODO:** make this section human readable. *
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Example
 
-## Extension Settings
+Run `eslint --fix` and update the document before saving.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+* due to poor choices by the eslint team, we have to either use a temp file or a json preprocessor to get the formatted result. *
 
-For example:
+```json
+save-runner": {
+	"enabled": true,
+	"showOutput": true,
+	"commands": [
+		{
+			// match ts, js, tsx, jsx files.
+			"match": "\.[tj]sx?$",
+			"before": [
+				"eslint --stdin --ext ${ext} --fix-dry-run --format=json",
+				"jq -r '.[0].output'"
+			],
+		}
+	]
+}
+```
 
-This extension contributes the following settings:
+## Placeholders in commands
 
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+* `${workspaceRoot}`: workspace root folder
+* `${file}`: path of saved file
+* `${ext}`: file extension
+* `${basename}`: saved file's basename
+* `${basenameNoExt}`: saved file's basename without extension
+* `${dirname}`: directory name of saved file
+* `${cwd}`: current working directory
 
-## Known Issues
+### Environment Variable Tokens
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* `${env.Name}`
 
-## Release Notes
+## Links
 
-Users appreciate release notes as you update your extension.
+* [Marketplace](https://marketplace.visualstudio.com/items/emeraldwalk.RunOnSave)
+* [Source Code](https://github.com/OneOfOne/vscode-save-runner)
 
-### 1.0.0
+## License
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+[MIT](https://opensource.org/licenses/MIT)
