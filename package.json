@@ -1,0 +1,93 @@
+{
+	"name": "save-runner",
+	"displayName": "Run Before/After Save",
+	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
+	"version": "0.0.1",
+	"publisher": "oneofone",
+	"engines": {
+		"vscode": "^1.22.0"
+	},
+	"categories": ["Other"],
+	"activationEvents": ["*"],
+	"main": "./out/extension",
+	"contributes": {
+		"commands": [
+			{
+				"command": "extension.sayHello",
+				"title": "Hello World"
+			}
+		],
+		"configuration": {
+			"title": "Run ",
+			"type": "object",
+			"properties": {
+				"save-runner": {
+					"type": "object",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"description": "Enable the extension.",
+							"default": true
+						},
+						"autoClearConsole": {
+							"type": "boolean",
+							"description": "Automatically clear the console on each save before running commands.",
+							"default": false
+						},
+						"shell": {
+							"type": "string",
+							"description": "Specify shell path to run commands (gets used in options arg passed to child_process.exec)."
+						},
+						"commands": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"match": {
+										"type": "string",
+										"description": "Regex for matching files to run commands on.",
+										"default": ".*"
+									},
+									"notMatch": {
+										"type": "string",
+										"description": "Regex for matching files *not* to run commands on.",
+										"default": ".*"
+									},
+									"before": {
+										"type": "string",
+										"description": "Command to execute before save, the document will be piped to the command and replaced with the output from the command.",
+										"default": "(cat, date)"
+									},
+									"after": {
+										"type": "string",
+										"description": "Command to execute on save.",
+										"default": "echo ${file}"
+									},
+									"isAsync": {
+										"type": "boolean",
+										"description": "Run command asynchronously, only applies to after save.",
+										"default": false
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+	},
+	"devDependencies": {
+		"typescript": "^2.6.1",
+		"vscode": "^1.1.6",
+		"tslint": "^5.8.0",
+		"@types/node": "^7.0.43",
+		"@types/mocha": "^2.2.42"
+	}
+}
