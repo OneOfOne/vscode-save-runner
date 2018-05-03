@@ -1,8 +1,8 @@
 {
 	"name": "save-runner",
-	"displayName": "Run Before/After Save",
+	"displayName": "Run pre/post save commands and custom linters.",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {
@@ -100,7 +100,7 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm install && npm run compile",
+		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"postinstall": "node ./node_modules/vscode/bin/install",
