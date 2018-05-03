@@ -85,9 +85,7 @@ export default class SaveRunner {
 	runPostSave = async (doc: vscode.TextDocument) => {
 		if (!this.cfg.enabled) return;
 
-		const cmds = this.getCommands(doc),
-			{ isAsync } = this.cfg;
-
+		const cmds = this.getCommands(doc);
 		if (!cmds.length) return;
 
 		this.doPanelStuff();
@@ -103,7 +101,7 @@ export default class SaveRunner {
 
 				const p = this.exec(cp);
 
-				if (isAsync) {
+				if (cmd.isAsync) {
 					p.then((output) => {
 						this.log(`- ${cp}`);
 						this.log(output);

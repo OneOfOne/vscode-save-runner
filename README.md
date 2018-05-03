@@ -81,17 +81,18 @@ Run `eslint_d --fix` and update the document before saving.
 * `${tmpFile}`: temp file path when `useTempFile` is set
 
 * `${workspaceRoot}`: workspace root folder
-* `${dirname}`: directory name of saved file
 
-* `${file}`: path to the file
+* `${file}`: full path to the file
+* `${relname}`: path to the file without the workspace path.
 * `${ext}`: file extension
 
+* `${dirname}`: directory name of saved file
 * `${basename}`: saved file's basename
 * `${basenameNoExt}`: saved file's basename without extension
 
 * `${cwd}`: current working directory
 
-* `${env.{name}}` match environment variable by name
+* `${env.**name**}` match environment variable by name
 
 ## Links
 
