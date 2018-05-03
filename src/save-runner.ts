@@ -6,39 +6,46 @@ import { writeFileSync, readFileSync } from 'fs';
 import { getEdits } from './diffutils';
 
 interface Command {
-	// regexp match, example: "\\.[tj]sx?$"
-	match?: string;
+	enabled?: boolean; // default false
+	include?: string; // regexp to match the file names
+	exclude?: string; // regexp to exclude file names
 
-	// regexp negative match, example: "do-not-lint-this.ts"
-	notMatch?: string;
+	// use a tempfile on pre-save, pass ${tmpFile} to the commands.
+	useTempFile?: boolean; // default true
 
-	// useTempFile instead of pipes, defaults to the global useTempFile
-	useTempFile?: boolean;
+	// run post-save commands async.
+	isAsync?: boolean; // default false
 
-	// command(s) to run before the document is saved to disk
-	before: string | string[];
+	// commands to run before the document is saved, the documen will be replaced with the stdout of the command chain.
+	// if useTempFile is false, the document will be piped to the commands.
+	pre: string | string[];
 
-	// command(s) to run after the document is saved to disk
-	after: string | string[];
-	// run after commands async, defaults to global isAsync;
-	isAsync?: boolean;
+	// commands to run after the file is successfully saved to disk.
+	post: string | string[];
 }
 
 interface Config extends vscode.WorkspaceConfiguration {
-	enabled?: boolean;
-	showOutput?: boolean;
-	shell?: string;
-	autoClearConsole?: boolean;
-	useTempFile?: boolean;
-	isAsync?: boolean;
+	enabled: boolean; // default false
 
-	commands?: Command[];
+	// show the output panel on updates
+	showOutput: boolean; // default false
+
+	// execute pre/post commands under the specified shell.
+	shell: string; // default ''
+
+	// auto clear the output channel before running commands.
+	autoClearOutput: boolean;
+
+	// commands to run
+	commands: Command[];
 }
 
+/* eslint no-await-in-loop:0 */
+
 export default class SaveRunner {
-	private ds: vscode.Disposable[] = [];
 	private chan: vscode.OutputChannel;
 	private cfg!: Config;
+	private running = false;
 
 	constructor(private ctx: vscode.ExtensionContext) {
 		this.ctx = ctx;
@@ -49,18 +56,16 @@ export default class SaveRunner {
 
 	start() {
 		const disposables = [
-			vscode.workspace.onWillSaveTextDocument(this.runBeforeSave),
-			vscode.workspace.onDidSaveTextDocument(this.runAfterSave),
+			vscode.workspace.onWillSaveTextDocument(this.runPreSave),
+			vscode.workspace.onDidSaveTextDocument(this.runPostSave),
 			vscode.workspace.onDidChangeConfiguration(() => this.loadConfig()),
 			this.chan,
 		];
 
 		this.ctx.subscriptions.push(...disposables);
-
-		this.ds = disposables;
 	}
 
-	runBeforeSave = async (e: vscode.TextDocumentWillSaveEvent) => {
+	runPreSave = async (e: vscode.TextDocumentWillSaveEvent) => {
 		if (!this.cfg.enabled) return;
 
 		const { document: doc } = e,
@@ -70,114 +75,14 @@ export default class SaveRunner {
 
 		this.doPanelStuff();
 
-		this.log('Running before-save commands...');
-
+		this.log('Running pre-save commands...');
 		const edits = await this.getEdits(doc, cmds);
-		const applied = await vscode.workspace.applyEdit(edits);
-
-		this.log(`${applied}: ${JSON.stringify(edits, null, '\t')}`);
-
-		// let out = doc.getText(),
-		// 	tempFile!: tmp.SynchrounousResult;
-
-		// const len = out.length;
-
-		// for (const cmd of cmds) {
-		// 	if (cmd.useTempFile && tempFile == null) tempFile = this.makeTempFile(out, doc.fileName);
-		// 	const tmpFile = tempFile ? tempFile.name : '';
-
-		// 	let cps = cmd.before;
-		// 	if (!Array.isArray(cps)) cps = [cps];
-
-		// 	for (let cp of cps) {
-		// 		cp = this.expandVars(doc, cp, tmpFile);
-
-		// 		this.log(`\n- ${cp}`);
-
-		// 		try {
-		// 			if (cmd.useTempFile) {
-		// 				out = this.exec(cp, out);
-		// 			} else {
-		// 				this.exec(cp);
-		// 			}
-		// 		} catch (err) {
-		// 			this.log(`! ${cp} ${err}`);
-		// 			break;
-		// 		}
-		// 	}
-		// }
-
-		// if (tempFile) {
-		// 	out = readFileSync(tempFile.name).toString();
-		// 	tempFile.removeCallback();
-		// }
-
-		// const range = new vscode.Range(0, 0, doc.lineCount, len);
-
-		// const editor = vscode.window.visibleTextEditors.find((te) => {
-		// 	const d = e.document;
-		// 	this.log(`${d.fileName} : ${doc.fileName}`);
-		// 	return d.fileName === doc.fileName;
-		// });
-
-		// const edits = getEdits(doc.fileName, doc.getText(), out);
-		// this.log(JSON.stringify(edits, null, '\t'));
-
-		// if (!editor) {
-		// 	this.log('could not get an active editor, refusing to run commands.');
-		// } else {
-		// 	e.waitUntil(editor.edit((te) => te.replace(range, out)));
-		// }
-
-		this.log('\nDone running.\n');
+		vscode.workspace.applyEdit(edits);
+		this.log('Done.\n');
+		this.running = false;
 	}
 
-	private async getEdits(doc: vscode.TextDocument, cmds: Command[]): Promise<vscode.WorkspaceEdit> {
-		let out = doc.getText(),
-			tempFile!: tmp.SynchrounousResult;
-
-		for (const cmd of cmds) {
-			if (cmd.useTempFile && tempFile == null) tempFile = this.makeTempFile(out, doc.fileName);
-			const tmpFile = tempFile ? tempFile.name : '';
-
-			let cps = cmd.before;
-			if (!Array.isArray(cps)) cps = [cps];
-
-			for (let cp of cps) {
-				cp = this.expandVars(doc, cp, tmpFile);
-
-				this.log(`\n- ${cp}`);
-
-				try {
-					if (cmd.useTempFile) {
-						out = this.exec(cp, out);
-					} else {
-						this.exec(cp);
-					}
-				} catch (err) {
-					this.log(`! ${cp} ${err}`);
-					break;
-				}
-			}
-		}
-
-		if (tempFile) {
-			out = readFileSync(tempFile.name).toString();
-			tempFile.removeCallback();
-		}
-
-		const results = new vscode.WorkspaceEdit(),
-			fileUri = vscode.Uri.file(doc.fileName),
-			{ edits } = getEdits(doc.fileName, doc.getText(), out);
-
-		for (const e of edits) {
-			e.applyUsingWorkspaceEdit(results, fileUri);
-		}
-
-		return results;
-	}
-
-	runAfterSave = (doc: vscode.TextDocument) => {
+	runPostSave = async (doc: vscode.TextDocument) => {
 		if (!this.cfg.enabled) return;
 
 		const cmds = this.getCommands(doc),
@@ -187,103 +92,110 @@ export default class SaveRunner {
 
 		this.doPanelStuff();
 
-		this.log('Running after-save commands...');
+		this.log('Running post-save commands...');
 
 		for (const cmd of cmds) {
-			let cps = cmd.before;
+			let cps = cmd.post;
 			if (!Array.isArray(cps)) cps = [cps];
 
-			for (const cp of cps) {
-				if (!isAsync) {
-					this.log(`\n- running: ${cp}\n`);
-					try {
-						this.chan.append(this.exec(cp));
-					} catch (err) {
-						this.log(`! ${cp} ${err}`);
-					}
+			for (let cp of cps) {
+				cp = this.expandVars(doc.fileName, cp);
+
+				const p = this.exec(cp);
+
+				if (isAsync) {
+					p.then((output) => {
+						this.log(`- ${cp}`);
+						this.log(output);
+					}).catch((err) => this.log(`! ${cp} ${err}`));
 					continue;
 				}
 
-				setTimeout(() => {
-					this.log(`\n- running: ${cp}\n`);
-					try {
-						this.chan.append(this.exec(cp));
-					} catch (err) {
-						this.log(`! ${cp} ${err}`);
-					}
-				}, 1);
+				try {
+					this.log(`- ${cp}`);
+					this.log(await p);
+				} catch (err) {
+					this.log(`! ${cp} ${err}`);
+				}
 			}
 		}
 
-		this.log('Done running.\n');
+		this.log('Done.\n');
+		this.running = false;
 	}
 
-	log(line: string) {
-		return this.chan.appendLine(line);
-	}
-
-	dispose = () => {
-		for (const d of this.ds) {
-			d.dispose();
+	log(line: string | Object) {
+		if (typeof line === 'string') {
+			this.chan.appendLine(line.trim());
+			return;
 		}
+
+		this.chan.appendLine(JSON.stringify(line, null, '\t'));
 	}
 
 	private loadConfig() {
 		const cfg = vscode.workspace.getConfiguration('save-runner') as Config;
+		// cfg = vscode.workspace.getConfiguration('save-runner') as Config;
+		const commands = (cfg.commands || []).map((cmd: Command) => ({
+			...cmd,
+			useTempFile: cmd.useTempFile == null ? true : cmd.useTempFile,
+			isAsync: cmd.isAsync == null ? false : cmd.isAsync,
+		}));
+
 		this.cfg = {
 			...cfg,
-			commands: cfg.commands || [],
-			enabled: cfg.enabled == null ? true : cfg.enabled,
-			isAsync: cfg.isAsync == null ? true : cfg.isAsync,
-			useTempFile: cfg.useTempFile == null ? true : cfg.useTempFile,
+			commands,
 		};
 
-		this.log(`Current Config: \n${JSON.stringify(this.cfg, null, '\t')}`);
+		this.log(`Using: ${JSON.stringify(this.cfg, null, '\t')}`);
 	}
 
-	private getCommands(doc: vscode.TextDocument, before?: boolean) {
-		const { isAsync, useTempFile } = this.cfg;
-		let cmds = this.cfg.commands!.filter((cmd) => {
-			if (before) return !!cmd.before;
-			return !!cmd.after;
-		});
-
+	private getCommands(doc: vscode.TextDocument, pre?: boolean): Command[] {
 		const match = (pattern: string) => !!pattern && new RegExp(pattern).test(doc.fileName);
 
-		cmds = cmds.filter((cmd) => {
-			const isMatch = !cmd.match || match(cmd.match);
-			const isNeg = cmd.notMatch && match(cmd.notMatch);
+		return this.cfg.commands
+			.filter((cmd) => {
+				const isNeg = cmd.exclude && match(cmd.exclude);
+				if (isNeg) return false;
 
-			return !isNeg && isMatch;
-		});
-
-		return cmds.map((cmd) => ({
-			...cmd,
-			useTempFile: cmd.useTempFile == null ? useTempFile : cmd.useTempFile,
-			isAsync: cmd.isAsync == null ? isAsync : cmd.isAsync,
-		}));
+				return !cmd.include || match(cmd.include);
+			})
+			.filter((cmd) => {
+				if (!cmd.enabled) return false;
+				return pre ? !!cmd.pre : !!cmd.post;
+			});
 	}
 
 	// shamelessly copied from https://github.com/emeraldwalk/vscode-runonsave/blob/master/src/extension.ts
-	private expandVars(doc: vscode.TextDocument, cmd: string, tmpFile: string = '') {
-		const extName = path.extname(doc.fileName);
+	private expandVars(file: string, cmd: string, tmpFile: string = '') {
+		const ext = path.extname(file),
+			wsRoot = vscode.workspace.rootPath || '';
 
-		let fixed = cmd.replace(/\${file}/g, `${doc.fileName}`);
-		fixed = fixed.replace(/\${ext}/g, `${extName}`);
-		fixed = fixed.replace(/\${tmpFile}/g, `${tmpFile}`);
-		fixed = fixed.replace(/\${workspaceRoot}/g, `${vscode.workspace.rootPath}`);
-		fixed = fixed.replace(/\${basename}/g, `${path.basename(doc.fileName)}`);
-		fixed = fixed.replace(/\${dirname}/g, `${path.dirname(doc.fileName)}`);
-		fixed = fixed.replace(/\${basenameNoExt}/g, `${path.basename(doc.fileName, extName)}`);
-		fixed = fixed.replace(/\${cwd}/g, `${process.cwd()}`);
+		const replaces: {[k: string]: string} = {
+			file,
+			ext,
+			tmpFile,
+			workspaceRoot: wsRoot,
+			basename: path.basename(file),
+			dirname: path.dirname(file),
+			relname: '.' + file.replace(wsRoot, ''),
+			basenameNoExt: path.basename(file, ext),
+			cwd: process.cwd(),
+		};
+
+		let expanded = cmd;
+
+		for (const k of Object.keys(replaces)) {
+			expanded = expanded.replace(new RegExp('\\${' + k + '}', 'g'), replaces[k]);
+		}
 
 		// replace environment variables ${env.Name}
-		fixed = fixed.replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName]);
+		expanded = expanded.replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName]);
 
-		return fixed;
+		return expanded;
 	}
 
-	private exec(cmd: string, text?: string): string {
+	private async exec(cmd: string, text?: string): Promise<string> {
 		const res = spawnSync(cmd, {
 			env: process.env,
 			cwd: vscode.workspace.rootPath,
@@ -299,8 +211,9 @@ export default class SaveRunner {
 	}
 
 	private doPanelStuff() { // I'm the best with names
-		if (this.cfg.autoClearConsole) this.chan.clear();
+		if (this.cfg.autoClearOutput && !this.running) this.chan.clear();
 		if (this.cfg.showOutput) this.chan.show(true);
+		this.running = true;
 	}
 
 	private makeTempFile(text: string, fn: string): tmp.SynchrounousResult {
@@ -312,5 +225,46 @@ export default class SaveRunner {
 		});
 		writeFileSync(f.name, text);
 		return f;
+	}
+
+	private async getEdits(doc: vscode.TextDocument, cmds: Command[]): Promise<vscode.WorkspaceEdit> {
+		let out = doc.getText(),
+			tempFile!: tmp.SynchrounousResult;
+
+		const origText = out;
+
+		for (const cmd of cmds) {
+			if (cmd.useTempFile && tempFile == null) tempFile = this.makeTempFile(out, doc.fileName);
+			const tmpFile = tempFile ? tempFile.name : '';
+
+			let cps = cmd.pre;
+			if (!Array.isArray(cps)) cps = [cps];
+
+			for (let cp of cps) {
+				cp = this.expandVars(doc.fileName, cp, tmpFile);
+
+				this.log(`- ${cp}`);
+
+				if (!cmd.useTempFile) {
+					out = await this.exec(cp, out);
+				} else {
+					await this.exec(cp);
+				}
+			}
+		}
+
+		if (tempFile) {
+			out = readFileSync(tempFile.name).toString();
+			tempFile.removeCallback();
+		}
+
+		const results = new vscode.WorkspaceEdit(),
+			{ edits } = getEdits(doc.fileName, origText, out);
+
+		for (const e of edits) {
+			e.applyUsingWorkspaceEdit(results, doc.uri);
+		}
+
+		return results;
 	}
 }

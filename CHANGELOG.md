@@ -1,7 +1,11 @@
 # Change Log
-All notable changes to the "run-before-save" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## v1.2.0 - 2018-05-03
 
-## [Unreleased]
-- Initial release
+### New Features and Enhancements
+
+* Complete rewrite.
+* It now uses diffs for pre-save commands to handle partial updates (for example running a custom linter) more efficently.
+* Renamed before/after to pre.
+* Config is name in the form of `save-runner.xxx` rather than a sub-object.
+* Each command has an `enabled` option to easily toggle them.

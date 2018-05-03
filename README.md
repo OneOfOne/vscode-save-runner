@@ -16,63 +16,64 @@ eslint extension's lack of proper fixing on save.
 ## Configuration
 
 ```ts
-interface Command {
-	// regexp match, example: "\\.[tj]sx?$"
-	match?: string;
-
-	// regexp negative match, example: "do-not-lint-this.ts"
-	notMatch?: string;
-
-	// useTempFile instead of pipes, defaults to the global useTempFile
-	useTempFile?: boolean;
-
-	// command(s) to run before the document is saved to disk
-	before: string | string[];
-
-	// command(s) to run after the document is saved to disk
-	after: string | string[];
-	// run after commands async, defaults to global isAsync;
-	isAsync?: boolean;
-}
-
 interface Config extends vscode.WorkspaceConfiguration {
-	enabled?: boolean;
-	showOutput?: boolean;
-	shell?: string;
-	autoClearConsole?: boolean;
-	useTempFile?: boolean;
-	isAsync?: boolean;
+	enabled: boolean; // default false
 
-	commands?: Command[];
+	// show the output panel on updates
+	showOutput: boolean; // default false
+
+	// execute pre/post commands under the specified shell.
+	shell: string; // default ''
+
+	// auto clear the output channel before running commands.
+	autoClearOutput: boolean;
+
+	// commands to run
+	commands: Command[];
 }
 
+interface Command {
+	enabled?: boolean; // default false
+	include?: string; // regexp to match the file names
+	exclude?: string; // regexp to exclude file names
+
+	// use a tempfile on pre-save, pass ${tmpFile} to the commands.
+	useTempFile?: boolean; // default true
+
+	// run post-save commands async.
+	isAsync?: boolean; // default false
+
+	// commands to run before the document is saved, the documen will be replaced with the stdout of the command chain.
+	// if useTempFile is false, the document will be piped to the commands.
+	pre: string | string[];
+
+	// commands to run after the file is successfully saved to disk.
+	post: string | string[];
+}
 ```
 
 * **TODO:** make this section human readable. *
 
 ## Example
 
-Run `eslint --fix` and update the document before saving.
-
-*We have to use [jq](https://stedolan.github.io/jq/) to return the actual fixed document since `eslint` doesn't support it directly.*
+Run `eslint_d --fix` and update the document before saving.
 
 ```json
-	"save-runner": {
-		"enabled": true,
-		"showOutput": true,
-		"commands": [
-			{
-				"match": "\\.[tj]sx?$",
-				"useTempFile": true,
-				"before": "eslint --fix ${tmpFile}"
-			}
-			{
-				"match": "\\.something.wicked.this.way.comes",
-				"useTempFile": false,
-				"before": "openssl base64"
-			}
-		]
-	}
+	"save-runner.enabled": true,
+	"save-runner.commands": [
+		{
+			"enabled": true,
+
+			"include": "\\.[tj]sx?$",
+			"exclude": "/node_modules/",
+
+			"useTempFile": true,
+			"isAsync": false,
+
+			"pre": "eslint_d --fix ${tmpFile}",
+			"post": "echo saved ${relname}"
+		}
+	]
 ```
 
 ## Placeholders in commands

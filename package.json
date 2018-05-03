@@ -2,7 +2,7 @@
 	"name": "save-runner",
 	"displayName": "Run Before/After Save",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.1.3",
+	"version": "1.2.0",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {
@@ -16,78 +16,85 @@
 	"engines": {
 		"vscode": "^1.22.0"
 	},
+	"main": "./out/extension",
+
 	"categories": ["Linters", "Formatters", "Other"],
-	"keywords": ["run on save", "run before save", "eslint fix"],
+	"keywords": ["run on save", "run before save", "onWillSaveTextDocument", "onDidSaveTextDocument", "eslint fix"],
+
 	"activationEvents": ["*"],
 	"private": true,
-	"main": "./out/extension",
+
 	"contributes": {
 		"configuration": {
-			"title": "Run ",
+			"id": "save-runner",
+			"title": "Save Runner Configuration",
 			"type": "object",
 			"properties": {
-				"save-runner": {
-					"type": "object",
-					"properties": {
-						"enabled": {
-							"type": "boolean",
-							"description": "Enable the extension.",
-							"default": true
-						},
-						"showOutput": {
-							"type": "boolean",
-							"description": "Automatically switch to the output panel when any commands are ran.",
-							"default": true
-						},
-						"autoClearConsole": {
-							"type": "boolean",
-							"description": "Automatically clear the console on each save before running commands.",
-							"default": false
-						},
-						"useTempFile": {
-							"type": "boolean",
-							"description": "use a temp file for before actions.",
-							"default": true
-						},
-						"shell": {
-							"type": "string",
-							"description": "Specify shell path to run commands (gets used in options arg passed to child_process.spawnSync)."
-						},
-						"commands": {
-							"type": "array",
-							"items": {
-								"type": "object",
-								"properties": {
-									"match": {
-										"type": "string",
-										"description": "Regex for matching files to run commands on.",
-										"default": ".*"
-									},
-									"notMatch": {
-										"type": "string",
-										"description": "Regex for matching files *not* to run commands on.",
-										"default": ".*"
-									},
-									"useTempFile": {
-										"type": "boolean",
-										"description": "use a temp file for before actions, uses the global useTempFile by default."
-									},
-									"before": {
-										"type": ["string", "array"],
-										"description": "Command(s) to execute before save, the document will be piped to the command and replaced with the output from the command.",
-										"default": "openssl base64"
-									},
-									"after": {
-										"type": "string",
-										"description": "Command to execute after save.",
-										"default": "echo ${file}"
-									},
-									"isAsync": {
-										"type": "boolean",
-										"description": "Run after-save commands asynchronously.",
-										"default": false
-									}
-								}
+				"save-runner.enabled": {
+					"type": "boolean",
+					"description": "Enable the extension.",
+					"default": false
+				},
+				"save-runner.showOutput": {
+					"type": "boolean",
+					"description": "Automatically switch to the output panel when any commands are ran.",
+					"default": false
+				},
+				"save-runner.autoClearConsole": {
+					"type": "boolean",
+					"description": "Automatically clear the console on each save before running commands.",
+					"default": false
+				},
+				"save-runner.shell": {
+					"type": "string",
+					"description": "Specify a custom shell to run the commands under."
+				},
+				"save-runner.commands": {
+					"type": "array",
+					"description": "An array of commands to run.",
+					"default": [
+						{
+							"enabled": false,
+							"match": "\\.[tj]sx?$",
+							"notMatch": "/node_modules/",
+							"useTempFile": true,
+							"pre": "eslint_d --fix ${tmpFile}",
+							"post": "echo saved ${relname}!",
+							"isAsync": false
+						}
+					],
+					"items": {
+						"type": "object",
+						"properties": {
+							"match": {
+								"type": "string",
+								"description": "Regex for matching files to run commands on.",
+								"default": "\\.[tj]sx?$"
+							},
+							"notMatch": {
+								"type": "string",
+								"description": "Regex for matching files *not* to run commands on.",
+								"default": "/node_modules/"
+							},
+							"useTempFile": {
+								"type": "boolean",
+								"description": "Use a temp file for pre-save actions, use ${tmpFile} in the command.",
+								"default": true
+							},
+							"pre": {
+								"type": ["string", "array"],
+								"description": "Command(s) to execute before save, if useTempFile is false, the document will be piped.",
+								"default": ""
+							},
+							"post": {
+								"type": ["string", "array"],
+								"description": "Command(s) to execute after save.",
+								"default": ""
+							},
+							"isAsync": {
+								"type": "boolean",
+								"description": "Run after-save commands asynchronously.",
+								"default": false
 							}
 						}
 					}
