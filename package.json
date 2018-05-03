@@ -17,13 +17,22 @@
 		"vscode": "^1.22.0"
 	},
 	"main": "./out/extension",
-
-	"categories": ["Linters", "Formatters", "Other"],
-	"keywords": ["run on save", "run before save", "onWillSaveTextDocument", "onDidSaveTextDocument", "eslint fix"],
-
-	"activationEvents": ["*"],
+	"categories": [
+		"Linters",
+		"Formatters",
+		"Other"
+	],
+	"keywords": [
+		"run on save",
+		"run before save",
+		"onWillSaveTextDocument",
+		"onDidSaveTextDocument",
+		"eslint fix"
+	],
+	"activationEvents": [
+		"*"
+	],
 	"private": true,
-
 	"contributes": {
 		"configuration": {
 			"id": "save-runner",
@@ -82,12 +91,18 @@
 								"default": true
 							},
 							"pre": {
-								"type": ["string", "array"],
+								"type": [
+									"string",
+									"array"
+								],
 								"description": "Command(s) to execute before save, if useTempFile is false, the document will be piped.",
 								"default": ""
 							},
 							"post": {
-								"type": ["string", "array"],
+								"type": [
+									"string",
+									"array"
+								],
 								"description": "Command(s) to execute after save.",
 								"default": ""
 							},
@@ -111,7 +126,6 @@
 		"install-local": "vsce package --yarn -o save-runner-latest.vsix && code --install-extension save-runner-latest.vsix"
 	},
 	"devDependencies": {
-		"@types/mocha": "^2.2.42",
 		"@types/node": "^7.0.43",
 		"@types/tmp": "0.0.33",
 		"tslint": "^5.8.0",
