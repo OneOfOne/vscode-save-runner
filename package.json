@@ -17,21 +17,9 @@
 		"vscode": "^1.22.0"
 	},
 	"main": "./out/extension",
-	"categories": [
-		"Linters",
-		"Formatters",
-		"Other"
-	],
-	"keywords": [
-		"run on save",
-		"run before save",
-		"onWillSaveTextDocument",
-		"onDidSaveTextDocument",
-		"eslint fix"
-	],
-	"activationEvents": [
-		"*"
-	],
+	"categories": ["Linters", "Formatters", "Other"],
+	"keywords": ["run on save", "run before save", "onWillSaveTextDocument", "onDidSaveTextDocument", "eslint fix"],
+	"activationEvents": ["*"],
 	"private": true,
 	"contributes": {
 		"configuration": {
@@ -91,18 +79,12 @@
 								"default": true
 							},
 							"pre": {
-								"type": [
-									"string",
-									"array"
-								],
+								"type": ["string", "array"],
 								"description": "Command(s) to execute before save, if useTempFile is false, the document will be piped.",
 								"default": ""
 							},
 							"post": {
-								"type": [
-									"string",
-									"array"
-								],
+								"type": ["string", "array"],
 								"description": "Command(s) to execute after save.",
 								"default": ""
 							},
@@ -118,7 +100,7 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"vscode:prepublish": "npm install && npm run compile",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"postinstall": "node ./node_modules/vscode/bin/install",
@@ -126,7 +108,7 @@
 		"install-local": "vsce package --yarn -o save-runner-latest.vsix && code --install-extension save-runner-latest.vsix"
 	},
 	"devDependencies": {
-		"@types/node": "^7.0.43",
+		"@types/node": "^7.0.63",
 		"@types/tmp": "0.0.33",
 		"tslint": "^5.8.0",
 		"typescript": "^2.7.0",
@@ -135,5 +117,7 @@
 	"dependencies": {
 		"diff": "^3.5.0",
 		"tmp": "0.0.33"
-	}
+	},
+	"bundledDependencies": ["diff", "tmp"],
+	"extensionDependencies": []
 }
