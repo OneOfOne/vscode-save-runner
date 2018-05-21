@@ -61,16 +61,22 @@ Run `eslint_d --fix` and update the document before saving.
 ```json
 	"save-runner.enabled": true,
 	"save-runner.commands": [
+		// write the current document to a tmp file, run eslint_d --fix on it,
+		// and run diff on the modified tmp file and apply it to the document.
 		{
-			"enabled": true,
-
+			"enabled": false,
 			"include": "\\.[tj]sx?$",
 			"exclude": "/node_modules/",
-
-			"useTempFile": true,
-			"isAsync": false,
-
 			"pre": "eslint_d --fix ${tmpFile}",
+			"post": "echo saved ${relname}"
+		},
+		// pipe the current document to goimports,
+		// then runs a diff on the output of goimports and applies it to the document.
+		{
+			"enabled": true,
+			"include": "\\.go$",
+			"useTempFile": false,
+			"pre": "goimports",
 			"post": "echo saved ${relname}"
 		}
 	]
@@ -93,6 +99,10 @@ Run `eslint_d --fix` and update the document before saving.
 * `${cwd}`: current working directory
 
 * `${env.**name**}` match environment variable by name
+
+## TODO
+
+* Detect commands that can return a diff (`goimports` for example`) and use that rather than using internal diff.
 
 ## Links
 
