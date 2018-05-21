@@ -188,7 +188,7 @@ export default class SaveRunner {
 		}
 
 		// replace environment variables ${env.Name}
-		expanded = expanded.replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName]);
+		expanded = expanded.replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] as string);
 
 		return expanded;
 	}

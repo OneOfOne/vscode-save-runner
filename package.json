@@ -2,7 +2,7 @@
 	"name": "save-runner",
 	"displayName": "Run pre/post save commands and custom linters.",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {
@@ -52,17 +52,27 @@
 					"default": [
 						{
 							"enabled": false,
-							"match": "\\.[tj]sx?$",
-							"notMatch": "/node_modules/",
-							"useTempFile": true,
+							"include": "\\.[tj]sx?$",
+							"exclude": "/node_modules/",
 							"pre": "eslint_d --fix ${tmpFile}",
-							"post": "echo saved ${relname}!",
-							"isAsync": false
+							"post": "echo saved ${relname}"
+						},
+						{
+							"enabled": false,
+							"include": "\\.go$",
+							"useTempFile": false,
+							"pre": "goimports",
+							"post": "echo saved ${relname}"
 						}
 					],
 					"items": {
 						"type": "object",
 						"properties": {
+							"enabled": {
+								"type": "boolean",
+								"description": "Enable this command.",
+								"default": false
+							},
 							"match": {
 								"type": "string",
 								"description": "Regex for matching files to run commands on.",
@@ -80,11 +90,17 @@
 							},
 							"pre": {
 								"type": ["string", "array"],
+								"items": {
+									"type": "string"
+								},
 								"description": "Command(s) to execute before save, if useTempFile is false, the document will be piped.",
 								"default": ""
 							},
 							"post": {
 								"type": ["string", "array"],
+								"items": {
+									"type": "string"
+								},
 								"description": "Command(s) to execute after save.",
 								"default": ""
 							},
@@ -108,10 +124,10 @@
 		"install-local": "vsce package --yarn -o save-runner-latest.vsix && code --install-extension save-runner-latest.vsix"
 	},
 	"devDependencies": {
-		"@types/node": "^7.0.63",
+		"@types/node": "^10.1.2",
 		"@types/tmp": "0.0.33",
 		"tslint": "^5.8.0",
-		"typescript": "^2.7.0",
+		"typescript": "^2.8.0",
 		"vscode": "^1.1.0"
 	},
 	"dependencies": {
