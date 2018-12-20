@@ -2,7 +2,7 @@
 	"name": "save-runner",
 	"displayName": "Run pre/post save commands and custom linters.",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {
@@ -125,11 +125,11 @@
 		"install-local": "vsce package -o save-runner-latest.vsix && code --install-extension save-runner-latest.vsix"
 	},
 	"devDependencies": {
-		"@types/node": "^10.1.2",
+		"@types/node": "^10.12.18",
 		"@types/tmp": "0.0.33",
-		"tslint": "^5.8.0",
-		"typescript": "^2.8.0",
-		"vscode": "^1.1.0"
+		"tslint": "^5.12.0",
+		"typescript": "^2.9.2",
+		"vscode": "^1.1.26"
 	},
 	"dependencies": {
 		"diff": "^3.5.0",
