@@ -17,9 +17,21 @@
 		"vscode": "^1.22.0"
 	},
 	"main": "./out/extension",
-	"categories": ["Linters", "Formatters", "Other"],
-	"keywords": ["run on save", "run before save", "onWillSaveTextDocument", "onDidSaveTextDocument", "eslint fix"],
-	"activationEvents": ["*"],
+	"categories": [
+		"Linters",
+		"Formatters",
+		"Other"
+	],
+	"keywords": [
+		"run on save",
+		"run before save",
+		"onWillSaveTextDocument",
+		"onDidSaveTextDocument",
+		"eslint fix"
+	],
+	"activationEvents": [
+		"*"
+	],
 	"private": true,
 	"contributes": {
 		"configuration": {
@@ -89,7 +101,10 @@
 								"default": true
 							},
 							"pre": {
-								"type": ["string", "array"],
+								"type": [
+									"string",
+									"array"
+								],
 								"items": {
 									"type": "string"
 								},
@@ -97,7 +112,10 @@
 								"default": ""
 							},
 							"post": {
-								"type": ["string", "array"],
+								"type": [
+									"string",
+									"array"
+								],
 								"items": {
 									"type": "string"
 								},
@@ -125,16 +143,19 @@
 		"install-local": "vsce package -o save-runner-latest.vsix && code --install-extension save-runner-latest.vsix"
 	},
 	"devDependencies": {
-		"@types/node": "^10.12.18",
+		"@types/node": "^10.14.6",
 		"@types/tmp": "0.0.33",
-		"tslint": "^5.12.0",
+		"tslint": "^5.16.0",
 		"typescript": "^2.9.2",
-		"vscode": "^1.1.26"
+		"vscode": "^1.1.34"
 	},
 	"dependencies": {
 		"diff": "^3.5.0",
 		"tmp": "0.0.33"
 	},
-	"bundledDependencies": ["diff", "tmp"],
+	"bundledDependencies": [
+		"diff",
+		"tmp"
+	],
 	"extensionDependencies": []
 }
