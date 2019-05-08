@@ -2,7 +2,7 @@
 	"name": "save-runner",
 	"displayName": "Run pre/post save commands and custom linters.",
 	"description": "Run commands when a file is about to be saved to disk and/or after it was already saved.",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"license": "MIT",
 	"publisher": "oneofone",
 	"author": {
